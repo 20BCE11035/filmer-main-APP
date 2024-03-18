@@ -1,0 +1,63 @@
+version: "3.7"
+
+services:
+
+    postgres:
+      image: postgres:13
+      hostname: postgres
+      environment:
+        - POSTGRES_DB=postgres
+        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=postgres
+      volumes: 
+        - ./data/db:/var/lib/postgresql/data
+        - ./scripts/:/docker-entrypoint-initdb.d/
+      networks: [ backend ]
+      restart: always
+
+    backend:
+      build:
+        context: .
+      environment:
+        - DJANGO_CONFIGURATION=Production
+        - POSTGRES_DB=postgres
+        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=postgres
+      hostname: backend
+      volumes:
+        - '.:/code'
+      ports:
+        - 8008:8008
+      networks:
+        - backend
+      restart: always
+      depends_on:
+        - postgres
+
+    frontend:
+      build:
+        context: ./frontend
+      volumes:
+        - ./certbot/www:/var/www/certbot/:ro
+        - ./certbot/conf/:/etc/nginx/ssl/:ro
+      ports:
+        - 80:80
+        - 443:443
+      depends_on:
+        - backend
+      restart: always
+      networks:
+        - backend
+
+    certbot:
+      image: certbot/certbot
+      volumes:
+        - ./certbot/www/:/var/www/certbot/:rw
+        - ./certbot/conf/:/etc/letsencrypt/:rw
+
+
+networks:
+  backend:
+
+volumes:
+  postgres_data:
